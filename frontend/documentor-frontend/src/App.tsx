@@ -6,7 +6,6 @@ import ChatBox from "./components/ChatBox";
 import DarkModeToggle from "./components/DarkModeToggle";
 import logo from "./assets/DocuMentor_Logo.png";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import SearchBar from "./components/SearchBar";
 
 // 🧠 Setup query client
 const queryClient = new QueryClient();
@@ -24,7 +23,6 @@ function App() {
         <main className="container">
           <UploadForm />
           <DocumentList />
-          <SearchBar />
           <ChatBox />
         </main>
       </div>

@@ -1,11 +1,13 @@
 // src/components/ChatBox.tsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 interface Message {
   id: number;
   sender: "user" | "bot";
   text: string;
   timestamp: string;
+  sources?: string[]; // For matched chunks
+  suggestions?: string[]; // Follow-up questions
 }
 
 const ChatBox: React.FC = () => {
@@ -14,11 +16,9 @@ const ChatBox: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
+  useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(scrollToBottom, [messages]);
+  }, [messages]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -47,34 +47,60 @@ const ChatBox: React.FC = () => {
       const decoder = new TextDecoder("utf-8");
       let botMessage = "";
 
+      const messageId = Date.now() + 1;
+
+      // Add placeholder
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: messageId,
+          sender: "bot",
+          text: "",
+          timestamp: new Date().toLocaleTimeString(),
+        },
+      ]);
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         botMessage += decoder.decode(value, { stream: true });
 
-        setMessages((prev) => {
-          const last = prev[prev.length - 1];
-          if (last && last.sender === "bot") {
-            return [...prev.slice(0, -1), { ...last, text: botMessage }];
-          } else {
-            return [
-              ...prev,
-              {
-                id: Date.now() + 1,
-                sender: "bot",
-                text: botMessage,
-                timestamp: new Date().toLocaleTimeString(),
-              },
-            ];
-          }
-        });
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId ? { ...msg, text: botMessage } : msg
+          )
+        );
       }
-    } catch (error) {
-      console.error("Error sending message:", error);
+
+      // Simulate highlighting & suggestions
+      const simulatedChunks = [
+        "• Company allows bonuses based on project performance.",
+        "• Severance is paid out over 3 months post-departure.",
+      ];
+
+      const followUps = [
+        "What is the severance package for managers?",
+        "How often are bonuses evaluated?",
+        "Can bonuses be withdrawn?"
+      ];
+
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, sources: simulatedChunks, suggestions: followUps }
+            : msg
+        )
+      );
+    } catch (err) {
+      console.error("Error:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setInput(suggestion);
   };
 
   return (
@@ -84,15 +110,46 @@ const ChatBox: React.FC = () => {
       <div className="chat-window">
         {messages.map((msg) => (
           <div key={msg.id} className={`chat-bubble ${msg.sender}`}>
-            <div className="message-text">{msg.text}</div>
+            <div className="message-text">
+              {msg.sender === "user" ? "🧑‍💼" : "🤖"} {msg.text}
+            </div>
             <div className="timestamp">{msg.timestamp}</div>
+
+            {/* Display matched chunks */}
+            {msg.sources && msg.sources.length > 0 && (
+              <div className="matched-chunks">
+                <strong>📚 Matched Chunks:</strong>
+                <ul>
+                  {msg.sources.map((src, idx) => (
+                    <li key={idx}>- {src}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Display suggestions */}
+            {msg.suggestions && msg.suggestions.length > 0 && (
+              <div className="suggestions">
+                <strong>💡 Follow-up Questions:</strong>
+                <div className="suggestion-list">
+                  {msg.suggestions.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="suggestion-btn"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ))}
 
         {loading && (
           <div className="chat-bubble bot">
-            <div className="message-text">Bot is thinking...</div>
-            <div className="timestamp">{new Date().toLocaleTimeString()}</div>
+            <div className="message-text">🤖 Thinking...</div>
           </div>
         )}
 
