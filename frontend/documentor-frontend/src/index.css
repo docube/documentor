@@ -9,7 +9,7 @@
 body {
   margin: 0;
   font-family: var(--font-body);
-  background-color: var(--bg-sky);
+  background-color: rgb(255, 253, 208);
   color: var(--text-color);
 }
 
